@@ -248,6 +248,7 @@ export const agents: Record<AgentType, AgentConfig> = {
     displayName: 'Dexto',
     skillsDir: '.agents/skills',
     globalSkillsDir: join(home, '.agents/skills'),
+    showInUniversalPrompt: false,
     detectInstalled: async () => {
       return existsSync(join(home, '.dexto'));
     },
@@ -266,6 +267,7 @@ export const agents: Record<AgentType, AgentConfig> = {
     displayName: 'Firebender',
     skillsDir: '.agents/skills',
     globalSkillsDir: join(home, '.firebender/skills'),
+    showInUniversalPrompt: false,
     detectInstalled: async () => {
       return existsSync(join(home, '.firebender'));
     },
@@ -401,6 +403,7 @@ export const agents: Record<AgentType, AgentConfig> = {
     displayName: 'Loaf',
     skillsDir: '.agents/skills',
     globalSkillsDir: join(home, '.agents/skills'),
+    showInUniversalPrompt: false,
     detectInstalled: async () => {
       return existsSync(join(home, '.loaf'));
     },
@@ -659,6 +662,7 @@ export const agents: Record<AgentType, AgentConfig> = {
     displayName: 'PromptScript',
     skillsDir: '.agents/skills',
     globalSkillsDir: undefined,
+    showInUniversalPrompt: false,
     detectInstalled: async () => {
       return (
         existsSync(join(process.cwd(), '.promptscript')) ||
@@ -708,6 +712,21 @@ export function getUniversalAgents(): AgentType[] {
   return (Object.entries(agents) as [AgentType, AgentConfig][])
     .filter(
       ([_, config]) => config.skillsDir === '.agents/skills' && config.showInUniversalList !== false
+    )
+    .map(([type]) => type);
+}
+
+/**
+ * Returns the subset of universal agents shown in the interactive locked section.
+ * All universal agents are still installed; this only keeps the prompt readable.
+ */
+export function getVisibleUniversalAgents(): AgentType[] {
+  return (Object.entries(agents) as [AgentType, AgentConfig][])
+    .filter(
+      ([_, config]) =>
+        config.skillsDir === '.agents/skills' &&
+        config.showInUniversalList !== false &&
+        config.showInUniversalPrompt !== false
     )
     .map(([type]) => type);
 }

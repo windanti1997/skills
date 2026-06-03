@@ -44,6 +44,7 @@ import {
   detectInstalledAgents,
   agents,
   getUniversalAgents,
+  getVisibleUniversalAgents,
   getNonUniversalAgents,
   isUniversalAgent,
 } from './agents.ts';
@@ -373,15 +374,17 @@ async function selectAgentsInteractive(options: {
   const supportsGlobalFilter = (a: AgentType) => !options.global || agents[a].globalSkillsDir;
 
   const universalAgents = getUniversalAgents().filter(supportsGlobalFilter);
+  const visibleUniversalAgents = getVisibleUniversalAgents().filter(supportsGlobalFilter);
   const otherAgents = getNonUniversalAgents().filter(supportsGlobalFilter);
 
   // Universal agents shown as locked section
   const universalSection = {
     title: 'Universal (.agents/skills)',
-    items: universalAgents.map((a) => ({
+    items: visibleUniversalAgents.map((a) => ({
       value: a,
       label: agents[a].displayName,
     })),
+    hiddenCount: universalAgents.length - visibleUniversalAgents.length,
   };
 
   // Other agents are selectable with their skillsDir as hint

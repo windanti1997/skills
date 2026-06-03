@@ -9,6 +9,7 @@ import {
   detectInstalledAgents,
   agents,
   getUniversalAgents,
+  getVisibleUniversalAgents,
   getNonUniversalAgents,
 } from './agents.ts';
 import { searchMultiselect } from './prompts/search-multiselect.ts';
@@ -227,6 +228,7 @@ export async function runSync(args: string[], options: SyncOptions = {}): Promis
   let targetAgents: AgentType[];
   const validAgents = Object.keys(agents);
   const universalAgents = getUniversalAgents();
+  const visibleUniversalAgents = getVisibleUniversalAgents();
 
   if (options.agent?.includes('*')) {
     targetAgents = validAgents as AgentType[];
@@ -264,10 +266,11 @@ export async function runSync(args: string[], options: SyncOptions = {}): Promis
           initialSelected: [],
           lockedSection: {
             title: 'Universal (.agents/skills)',
-            items: universalAgents.map((a) => ({
+            items: visibleUniversalAgents.map((a) => ({
               value: a,
               label: agents[a].displayName,
             })),
+            hiddenCount: universalAgents.length - visibleUniversalAgents.length,
           },
         });
 
@@ -301,10 +304,11 @@ export async function runSync(args: string[], options: SyncOptions = {}): Promis
         initialSelected: installedAgents.filter((a) => !universalAgents.includes(a)),
         lockedSection: {
           title: 'Universal (.agents/skills)',
-          items: universalAgents.map((a) => ({
+          items: visibleUniversalAgents.map((a) => ({
             value: a,
             label: agents[a].displayName,
           })),
+          hiddenCount: universalAgents.length - visibleUniversalAgents.length,
         },
       });
 

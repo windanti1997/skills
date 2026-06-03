@@ -91,6 +91,8 @@ export interface AgentConfig {
   detectInstalled: () => Promise<boolean>;
   /** Whether to show this agent in the universal agents list. Defaults to true. */
   showInUniversalList?: boolean;
+  /** Whether to display this universal agent in the interactive locked section. Defaults to true. */
+  showInUniversalPrompt?: boolean;
 }
 
 export interface ParsedSource {
