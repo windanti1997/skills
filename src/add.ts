@@ -376,7 +376,9 @@ async function selectAgentsInteractive(options: {
 
   const universalAgents = getUniversalAgents().filter(supportsGlobalFilter);
   const visibleUniversalAgents = getVisibleUniversalAgents().filter(supportsGlobalFilter);
-  const otherAgents = getNonUniversalAgents().filter(supportsGlobalFilter);
+  const otherAgents = getNonUniversalAgents().filter(
+    (agent) => agent !== 'eve' && supportsGlobalFilter(agent)
+  );
 
   // Universal agents shown as locked section
   const universalSection = {
@@ -1288,9 +1290,34 @@ export async function runAdd(args: string[], options: AddOptions = {}): Promise<
       const totalAgents = Object.keys(agents).length;
       spinner.stop(`${totalAgents} agents`);
 
-      if (installedAgents.includes('eve')) {
-        targetAgents = ['eve'];
-        p.log.info(`Installing to: ${pc.cyan(agents.eve.displayName)}`);
+      if (installedAgents.includes('eve') && (options.yes || !agentResult.isAgent)) {
+        const useEve = options.yes
+          ? true
+          : await p.confirm({
+              message: 'Detected an Eve project. Install skills for Eve?',
+              initialValue: true,
+            });
+
+        if (p.isCancel(useEve)) {
+          p.cancel('Installation cancelled');
+          await cleanup(tempDir);
+          process.exit(0);
+        }
+
+        if (useEve) {
+          targetAgents = ['eve'];
+          p.log.info(`Installing to: ${pc.cyan(agents.eve.displayName)}`);
+        } else {
+          const selected = await selectAgentsInteractive({ global: options.global });
+
+          if (p.isCancel(selected)) {
+            p.cancel('Installation cancelled');
+            await cleanup(tempDir);
+            process.exit(0);
+          }
+
+          targetAgents = selected as AgentType[];
+        }
       } else if (installedAgents.length === 0) {
         if (options.yes) {
           targetAgents = validAgents as AgentType[];
@@ -1298,10 +1325,12 @@ export async function runAdd(args: string[], options: AddOptions = {}): Promise<
         } else {
           p.log.info('Select agents to install skills to');
 
-          const allAgentChoices = Object.entries(agents).map(([key, config]) => ({
-            value: key as AgentType,
-            label: config.displayName,
-          }));
+          const allAgentChoices = Object.entries(agents)
+            .filter(([key]) => key !== 'eve')
+            .map(([key, config]) => ({
+              value: key as AgentType,
+              label: config.displayName,
+            }));
 
           // Use helper to prompt with search
           const selected = await promptForAgents(
