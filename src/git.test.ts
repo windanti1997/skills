@@ -118,7 +118,18 @@ describe('git clone fallbacks', () => {
     expect(execFileMock).toHaveBeenNthCalledWith(
       2,
       'gh',
-      ['repo', 'clone', 'Giphy/giphy-codex-skills', tempDir, '--', '--depth=1'],
+      [
+        'repo',
+        'clone',
+        'Giphy/giphy-codex-skills',
+        tempDir,
+        '--',
+        '-c',
+        'protocol.ext.allow=never',
+        '-c',
+        'protocol.fd.allow=never',
+        '--depth=1',
+      ],
       expect.any(Object),
       expect.any(Function)
     );
@@ -192,6 +203,28 @@ describe('git clone fallbacks', () => {
     await expect(cloneRepo('git@github.com:Giphy/giphy-codex-skills.git')).rejects.toThrow(
       GitCloneError
     );
+    expect(execFileMock).not.toHaveBeenCalled();
+  });
+
+  it('configures git to deny command-executing transports', async () => {
+    const primaryClone = vi.fn().mockResolvedValue(undefined);
+    simpleGitMock.mockReturnValueOnce(createGitClientMock(primaryClone));
+
+    const tempDir = await cloneRepo('https://github.com/Giphy/giphy-codex-skills.git');
+    createdDirs.push(tempDir);
+
+    expect(simpleGitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.arrayContaining(['protocol.ext.allow=never', 'protocol.fd.allow=never']),
+      })
+    );
+  });
+
+  it('rejects unsafe git transports before invoking git', async () => {
+    await expect(cloneRepo('ext::sh -c id')).rejects.toThrow('Unsafe git source');
+    await expect(cloneRepo('fd::3')).rejects.toThrow('Unsafe git source');
+
+    expect(simpleGitMock).not.toHaveBeenCalled();
     expect(execFileMock).not.toHaveBeenCalled();
   });
 });

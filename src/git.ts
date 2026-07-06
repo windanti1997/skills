@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { assertSafeGitCloneUrl } from './source-parser.ts';
 
 const DEFAULT_CLONE_TIMEOUT_MS = 300_000; // 5 minutes
 const CLONE_TIMEOUT_MS = (() => {
@@ -13,6 +14,14 @@ const CLONE_TIMEOUT_MS = (() => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_CLONE_TIMEOUT_MS;
 })();
 const execFileAsync = promisify(execFile);
+const SAFE_GIT_CONFIG = ['protocol.ext.allow=never', 'protocol.fd.allow=never'];
+const SAFE_GIT_CLONE_CONFIG_ARGS = SAFE_GIT_CONFIG.flatMap((entry) => ['-c', entry]);
+
+type GitClientOptionsWithEnv = {
+  timeout: { block: number };
+  env: NodeJS.ProcessEnv;
+  config: string[];
+};
 
 interface GitHubRepoInfo {
   owner: string;
@@ -99,7 +108,7 @@ function isAuthFailure(message: string): boolean {
 }
 
 function createGitClient(extraEnv?: NodeJS.ProcessEnv) {
-  return simpleGit({
+  const options: GitClientOptionsWithEnv = {
     timeout: { block: CLONE_TIMEOUT_MS },
     env: {
       ...process.env,
@@ -123,12 +132,14 @@ function createGitClient(extraEnv?: NodeJS.ProcessEnv) {
     //
     // Reported downstream: heygen-com/hyperframes#407.
     config: [
+      ...SAFE_GIT_CONFIG,
       'filter.lfs.required=false',
       'filter.lfs.smudge=',
       'filter.lfs.clean=',
       'filter.lfs.process=',
     ],
-  });
+  };
+  return simpleGit(options as unknown as Parameters<typeof simpleGit>[0]);
 }
 
 async function resetTempDir(dir: string): Promise<void> {
@@ -153,10 +164,14 @@ async function tryGhClone(repo: GitHubRepoInfo, tempDir: string, ref?: string): 
   }
 
   const gitFlags = ref ? ['--depth=1', '--branch', ref] : ['--depth=1'];
-  await execFileAsync('gh', ['repo', 'clone', cloneTarget, tempDir, '--', ...gitFlags], {
-    timeout: CLONE_TIMEOUT_MS,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-  });
+  await execFileAsync(
+    'gh',
+    ['repo', 'clone', cloneTarget, tempDir, '--', ...SAFE_GIT_CLONE_CONFIG_ARGS, ...gitFlags],
+    {
+      timeout: CLONE_TIMEOUT_MS,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    }
+  );
   return true;
 }
 
@@ -189,6 +204,8 @@ function buildGitHubAuthError(url: string, repo: GitHubRepoInfo | null, message:
 }
 
 export async function cloneRepo(url: string, ref?: string): Promise<string> {
+  assertSafeGitCloneUrl(url);
+
   const tempDir = await mkdtemp(join(tmpdir(), 'skills-'));
   const cloneOptions = ref ? ['--depth', '1', '--branch', ref] : ['--depth', '1'];
   const repo = parseGitHubRepoUrl(url);

@@ -9,6 +9,7 @@ import * as remove from '../src/remove.ts';
 import * as p from '@clack/prompts';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { spawnSync } from 'child_process';
 
 // Mock dependencies
 vi.mock('../src/git.ts');
@@ -190,6 +191,26 @@ describe('Update Cleanup Unit Tests', () => {
 
       expect(p.confirm).not.toHaveBeenCalled();
       expect(remove.removeCommand).not.toHaveBeenCalled();
+    });
+
+    it('refuses unsafe git sources from project skills-lock.json before cloning or updating', async () => {
+      vi.mocked(localLock.readLocalLock).mockResolvedValue({
+        version: 1,
+        skills: {
+          'evil-skill': {
+            source: 'ext::sh -c id',
+            skillPath: 'skills/evil/SKILL.md',
+            sourceType: 'git',
+            computedHash: 'abc',
+          },
+        },
+      });
+
+      const result = await updateProjectSkills({ yes: true });
+
+      expect(result.failCount).toBe(1);
+      expect(git.cloneRepo).not.toHaveBeenCalled();
+      expect(spawnSync).not.toHaveBeenCalled();
     });
   });
 

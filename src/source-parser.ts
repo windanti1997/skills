@@ -198,6 +198,34 @@ function looksLikeGitSource(input: string): boolean {
   );
 }
 
+const SAFE_GIT_URL_PROTOCOLS = new Set(['http:', 'https:', 'ssh:', 'git:']);
+const GIT_SCP_URL_RE = /^git@[A-Za-z0-9.-]+:[^\s\0]+$/;
+
+export function isSafeGitCloneUrl(input: string): boolean {
+  if (/[\0-\x20\x7f]/.test(input)) {
+    return false;
+  }
+
+  if (GIT_SCP_URL_RE.test(input)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(input);
+    return SAFE_GIT_URL_PROTOCOLS.has(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+export function assertSafeGitCloneUrl(input: string): void {
+  if (!isSafeGitCloneUrl(input)) {
+    throw new Error(
+      'Unsafe git source: only http://, https://, ssh://, git://, and git@host:path transports are allowed.'
+    );
+  }
+}
+
 function parseFragmentRef(input: string): FragmentRefResult {
   const hashIndex = input.indexOf('#');
   if (hashIndex < 0) {
@@ -400,6 +428,7 @@ export function parseSource(input: string): ParsedSource {
   }
 
   // Fallback: treat as direct git URL
+  assertSafeGitCloneUrl(input);
   return {
     type: 'git',
     url: input,

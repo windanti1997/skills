@@ -269,6 +269,21 @@ describe('parseSource', () => {
       expect(result.url).toBe('ssh://git@git.example.com:7999/owner/repo.git');
       expect(result.ref).toBe('release-2026');
     });
+
+    it('Git URL - git protocol', () => {
+      const result = parseSource('git://git.example.com/owner/repo.git');
+      expect(result.type).toBe('git');
+      expect(result.url).toBe('git://git.example.com/owner/repo.git');
+    });
+
+    it('rejects command-executing and local git transports', () => {
+      expect(() => parseSource('ext::sh -c id')).toThrow('Unsafe git source');
+      expect(() => parseSource('fd::3')).toThrow('Unsafe git source');
+      expect(() => parseSource('file:///tmp/repo.git')).toThrow('Unsafe git source');
+      expect(() => parseSource('rsync://git.example.com/owner/repo.git')).toThrow(
+        'Unsafe git source'
+      );
+    });
   });
 });
 
