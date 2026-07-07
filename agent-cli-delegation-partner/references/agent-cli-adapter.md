@@ -23,6 +23,42 @@
 
 优先使用 `{prompt_file}`，因为长 prompt 通过命令行 inline 传递容易遇到转义和长度问题。
 
+## Windows 兼容要求
+
+Windows 上很多 Node/npm/yarn/pnpm 安装的 CLI 实际入口是 `.cmd` 或 `.bat`。
+
+`delegate-agent.py` 会先用 `shutil.which()` 解析 argv[0]，如果发现是 `.cmd` / `.bat`，会通过 Windows shell 执行，避免直接启动失败。
+
+如果自定义 wrapper 仍失败，优先检查：
+
+- CLI 是否在 PATH 上。
+- 实际入口是不是 `.cmd`。
+- prompt 是否太长，是否应该改用 `{prompt_file}`。
+- 当前 shell 和路径风格是否写进了 brief。
+
+## 长任务支持
+
+前台模式会实时输出并写日志，避免长任务完全静默。
+
+后台模式：
+
+```text
+python scripts/delegate-agent.py \
+  --workspace /path/to/project \
+  --title "Long implementation" \
+  --prompt-file /tmp/delegation-brief.md \
+  --agent mimo \
+  --background
+```
+
+脚本会返回 PID、log 文件和 status JSON。
+
+查询状态：
+
+```text
+python scripts/delegate-agent.py --status /path/to/status.json
+```
+
 ## 示例
 
 Mimo：
@@ -44,3 +80,13 @@ agentx "{prompt}"
 ```
 
 inline 模式只适合短任务。复杂任务优先选择 prompt file。
+
+## yargs / array 参数注意事项
+
+有些 CLI 使用 yargs、commander 或类似参数解析库。对 `-f` 这类 array/repeatable 选项，如果后面还有位置参数，可能会被错误吞进数组里。
+
+建议：
+
+- 把位置参数放在 `-f` 等 array 参数之前；或
+- 用 `--` 明确分隔 CLI options 和 task positional arguments；或
+- 优先用 `--task-file {prompt_file}` 这种显式参数，不混用模糊位置参数。
