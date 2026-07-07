@@ -11,6 +11,14 @@ Codex 应要求执行 Agent 在结束时使用这个结构输出：
 
 - <path>: <short reason>
 
+## Workflow Artifacts Updated
+
+- <path or none>: <what was updated>
+
+## Trellis State / Implementation Record
+
+<Trellis task state, implement.md update, task.py commands used, or N/A>
+
 ## Verification
 
 - `<command>`: <passed/failed/skipped and why>
