@@ -17,6 +17,7 @@
 Task: Fix the failing tests from `<command>`.
 Focus only on the failure surfaced by this command. Do not refactor unrelated code.
 Run the command after changes. If failures remain, report the exact failing test and your best root-cause hypothesis.
+Distinguish pre-existing failures from failures caused by this change.
 ```
 
 ## Review 重点
@@ -24,3 +25,4 @@ Run the command after changes. If failures remain, report the exact failing test
 - 修复是否聚焦？
 - 测试是否真的重跑？
 - 执行 Agent 是否隐藏或泛化了剩余失败？
+- 是否把 pre-existing failure 和本次改动引入的 failure 区分开？
