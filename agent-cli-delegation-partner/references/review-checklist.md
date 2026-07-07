@@ -12,6 +12,9 @@
 ## 项目工作流
 
 - 如果存在 Trellis，`.trellis/tasks/` 是否被正确更新？
+- Trellis 的 `task.json` 状态、`implement.md` 执行记录、实际代码 diff 是否一致？
+- 执行 Agent 是否误用了自己的内部 task 系统来替代 Trellis？
+- 如果 Codex 保留状态流转权，执行 Agent 是否至少更新了执行记录？
 - 如果存在 Superpowers / using-superpowers，是否遵守了项目自己的流程？
 - 如果存在 spec / plan，代码和文档是否一致？
 - 是否强行创建了项目不需要的流程文件？
@@ -28,6 +31,7 @@
 - 是否运行了有意义的测试、构建或静态检查？
 - 失败是否如实报告？
 - 如果跳过检查，理由是否成立？
+- 是否把 pre-existing failure 和本次改动导致的 failure 区分开？
 
 ## 安全与风险
 
