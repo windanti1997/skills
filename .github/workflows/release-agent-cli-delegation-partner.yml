@@ -1,0 +1,74 @@
+name: Release agent-cli-delegation-partner
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release-agent-cli-delegation-partner.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: agent-cli-delegation-partner-v0.1.0
+      ZIP_NAME: agent-cli-delegation-partner.zip
+      SKILL_DIR: agent-cli-delegation-partner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare release package
+        run: |
+          rm -f "$ZIP_NAME"
+          zip -r "$ZIP_NAME" "$SKILL_DIR" -x "*/__pycache__/*" "*.pyc"
+          cat > release-notes.md <<'EOF'
+          # agent-cli-delegation-partner v0.1.0
+
+          首个可分发版本。
+
+          ## 这个 skill 是什么
+
+          让 Codex 在复杂任务中从“亲自硬扛所有上下文”变成“负责任地委托其他 CLI Agent 执行”：Codex 负责澄清需求、识别项目工作流、写 delegation brief、review diff 和验证结果；Mimo / MimoCode / 其他 Agent CLI 负责长上下文执行。
+
+          ## 本版重点
+
+          - 通用 Agent CLI 委托协议，不绑定 Mimo。
+          - 支持 Trellis / Superpowers / spec / plan 等项目工作流识别。
+          - Trellis 场景明确 task.py、task.json、implement.md 和状态流转分工。
+          - 运行时脚本支持 Windows .cmd/.bat、实时输出、日志、后台执行和状态查询。
+          - 包含 brief 模板、review checklist、CLI adapter 说明和 5 个使用案例。
+
+          ## 下载
+
+          下载本 release 附件中的 `agent-cli-delegation-partner.zip`，解压后把 `agent-cli-delegation-partner/` 放入你的 Codex skills 目录，例如 `~/.codex/skills/`。
+          EOF
+
+      - name: Create tag if missing
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "$TAG"; then
+            echo "Tag $TAG already exists"
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "$TAG"
+          fi
+
+      - name: Create release if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+          gh release create "$TAG" "$ZIP_NAME" \
+            --title "agent-cli-delegation-partner v0.1.0" \
+            --notes-file release-notes.md \
+            --latest
