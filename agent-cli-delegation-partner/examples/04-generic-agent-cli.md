@@ -13,6 +13,7 @@ Use agentx instead of Mimo.
 1. 把 `agentx` 当成执行 CLI。
 2. 构造 command template，把 workspace 和 prompt file 传进去。
 3. 通过 `scripts/delegate-agent.py --command-template` 调用。
+4. 如果 CLI 使用 yargs/commander 这类解析器，注意 array 参数和位置参数顺序。
 
 ## 示例命令
 
@@ -22,6 +23,20 @@ python scripts/delegate-agent.py \
   --title "Implement checkout validation" \
   --prompt-file /tmp/delegation-brief.md \
   --command-template "agentx run --cwd {workspace} --task-file {prompt_file}"
+```
+
+## yargs 注意事项
+
+对 `-f` 这类 array/repeatable 选项，位置参数放前，或用 `--` 分隔：
+
+```text
+agentx run task-name -f a -f b
+```
+
+或：
+
+```text
+agentx run -f a -f b -- task-name
 ```
 
 ## 原则
