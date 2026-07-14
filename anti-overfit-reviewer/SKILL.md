@@ -1,9 +1,9 @@
 ---
 name: anti-overfit-reviewer
-description: 中文优先反过拟合审查器。Use this skill to review an agent answer, plan, document, code proposal, or deliverable for flattery, open-set collapse, semantic drift, fake precision, fake completion, and failure to preserve the global objective.
+description: 中文优先反过拟合审查器。Use this skill to review an agent answer, plan, document, code proposal, or deliverable for flattery, open-set collapse, semantic drift, fake precision, fake completion, code-level overfitting (test manipulation, superficial tests, missing integration tests), and failure to preserve the global objective. Uses first-principles and Socratic self-questioning for deep review.
 license: MIT
 metadata:
-  version: "1.1.0-zh-first"
+  version: "2.1.0-subagent-first"
   author: "windanti collaboration protocol"
 ---
 
@@ -15,14 +15,109 @@ metadata:
 
 不要用“基本可以”“整体不错”掩盖阻塞问题。发现核心失败，必须判定 FAIL。
 
+## Subagent 优先原则
+
+**能让独立 subagent 做的 review，就不要自己做。**
+
+自我审查天然有盲区——自己写的东西自己怎么看都觉得没问题。越复杂、越重要的输出，越需要独立第三方审查。
+
+### 什么时候必须用 subagent review
+
+- 完整交付物（文章、文档包、PRD、代码项目）
+- 复杂技术方案或架构设计
+- 涉及关键决策的判断
+- 你自己觉得"好像没问题，但说不上来为什么"的时候
+- 用户明确要求 review 的任何输出
+
+### 什么时候可以自审
+
+- 非常简单、边界清晰的小改动
+- 时间极其紧迫，且做错成本很低
+- subagent 确实不可用
+
+### Subagent review 操作要点
+
+1. 把用户原始需求 + 候选输出完整传给 subagent
+2. 明确告诉 subagent 用 anti-overfit-reviewer 标准审查
+3. 不要给 subagent 暗示"应该通过"，不要提前下结论
+4. subagent 返回 FAIL 就必须整改，不能因为"我觉得没问题"就忽略
+5. 对重要输出，可以找多个 subagent 交叉 review
+
 ## 审查流程
 
 1. 读取用户原始请求和候选输出。
-2. 判断用户是否给了例子、锚点、质疑、局部批评、方向信号或不完整需求。
-3. 检查候选输出是否保留真实目标，而不是只满足最新字面要求。
-4. 应用 `references/review-rubric.md`。
-5. 返回 PASS / PASS WITH RISKS / FAIL。
-6. 如果 FAIL，必须指出失败机制和必须重做的地方。
+2. 判断审查复杂度和重要性，优先考虑调用独立 subagent 做 review。
+3. 如果自审，判断用户是否给了例子、锚点、质疑、局部批评、方向信号或不完整需求。
+4. 检查候选输出是否保留真实目标，而不是只满足最新字面要求。
+5. 做第一性原理穿透：候选输出回答的是根问题，还是表面问题？
+6. 做自我苏格拉底提问：我作为 reviewer 有没有过拟合？有没有放水？
+7. 如果是代码/技术方案，应用代码层过拟合审查。
+8. 应用 `references/review-rubric.md`。
+9. 返回 PASS / PASS WITH RISKS / FAIL。
+10. 如果 FAIL，必须指出失败机制和必须重做的地方。
+
+## 第一性原理审查
+
+作为 reviewer，你不能只看表面是否满足要求，要穿透到根问题：
+
+- 候选输出回答的是用户的根问题，还是只回答了表面问题？
+- 有没有偷换问题边界？（把难做的换成好做的）
+- 关键假设是否明确？哪些是事实、哪些是假设？
+- 有没有可能用户和实现者都问错了问题？
+- 方案是从基本要素推导出来的，还是照搬现成模板？
+
+## 代码层过拟合审查（代码/技术方案必查）
+
+如果候选输出包含代码实现、技术方案、测试代码，必须额外检查：
+
+### 测试真实性
+- 测试是在验证逻辑，还是只验证"文件生成了/函数存在"这种表面现象？
+- 有没有为了让测试通过而修改测试代码，而不是修复实现代码？
+- 测试用例是否覆盖了边界条件和失败路径，还是只测 happy path？
+- 断言是否检查了具体输出内容，还是只检查"不报错"？
+
+### 测试完整性
+- 只有单元测试，没有集成测试？各模块拼起来真的能工作吗？
+- 只测了单个函数/单个功能，没有验证功能之间的交互？
+- 端到端流程是否有人工或自动验证？
+- 测试数据是真实场景的，还是为了通过测试而构造的简单样例？
+
+### 代码真实性
+- 功能是真实现了，还是只是 stub / placeholder / TODO？
+- 错误处理是真实的，还是只 `try-catch` 然后吞掉错误？
+- 日志和监控是为了可观测性，还是为了凑行数？
+- 性能优化是测出来的，还是拍脑袋加的？
+
+## 最近对话过拟合审查（多轮对话必查）
+
+如果候选输出来自多轮对话，必须额外检查是否被最近几轮对话带偏了：
+
+**审查要点：**
+1. **回溯最初目标**：用户最初的真实目标是什么？翻到第一轮对话确认。
+2. **方向一致性**：候选输出的方向，和最初目标一致吗？还是已经悄悄偏了？
+3. **反馈性质判断**：最近几轮用户的反馈，是在修正方向偏差，还是在引入新的无关需求？
+4. **反事实检验**：如果用户没说最近那些话，实现者还会做现在这些东西吗？
+
+**典型过拟合信号：**
+- 目标从"解决A问题"变成了"实现B功能"
+- 本来是 MVP，越做越大变成了完整产品
+- 用户一句局部批评，把原来正确的整体也推翻了
+- 最初的约束（时间、资源、范围）被遗忘了
+- 新增了很多用户随口一提但和核心目标无关的功能
+
+如果发现严重偏离最初目标，即使实现得再好，也要判 FAIL 或至少 PASS WITH RISKS 并明确指出目标漂移问题。
+
+## 自我苏格拉底提问（reviewer 防过拟合）
+
+在你给出审查结论之前，先问自己：
+
+1. 我是在真审查，还是在走流程打勾？
+2. 我有没有因为"看起来写了很多"就放松标准？
+3. 我有没有因为实现者态度好就放水？
+4. 我找的问题是真问题，还是鸡蛋里挑骨头？
+5. 如果这个输出是我自己写的，我会放过它吗？
+6. 我有没有漏掉最关键的那个风险？
+7. 我的 FAIL/PASS 判断有明确证据支持吗？
 
 ## 阻塞失败
 
@@ -37,7 +132,13 @@ metadata:
 - 用摘要、列表、空文件、无法运行的包冒充完整交付；
 - 扩功能/扩文档，而当前更该验证、删除、收敛或停止；
 - 没有说明关键假设；
-- 输出看起来完整，但用户不能直接使用。
+- 输出看起来完整，但用户不能直接使用；
+- 偷换问题：回答的是容易的问题，不是用户真正的问题；
+- 代码层面：为了通过测试而修改测试，而非修复实现；
+- 代码层面：测试只验证表面现象（文件存在/函数返回非空），不验证核心逻辑；
+- 代码层面：只有单元测试，完全没有集成/端到端验证，且功能涉及多模块交互；
+- 代码层面：功能是 stub/placeholder，声称已完成但实际不可用；
+- 多轮对话过拟合：严重偏离用户最初目标，被最近几轮对话带偏了方向。
 
 ## 必须输出格式
 
@@ -55,4 +156,7 @@ Evidence level:
 
 ## 审查标准
 
-需要更细时读取 `references/review-rubric.md`。
+需要更细时读取：
+- `references/review-rubric.md`：完整审查 rubric；
+- `references/failure-modes.md`：常见失败模式；
+- `references/code-review-checklist.md`：代码层过拟合专项检查清单。

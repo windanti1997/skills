@@ -49,6 +49,26 @@ trellis-task-contract
 
 长任务不能等最后才验收。必须设计中间 checkpoint，每个 checkpoint 都回填证据。
 
+### 6. 测试契约：单测和集成都不能偷懒
+
+代码任务的测试不是可选的，而是任务契约的一部分。必须明确：
+- 单测覆盖什么范围、什么边界
+- 集成测试覆盖什么模块交互、什么调用链
+- 不是只写"有测试"，而是写清楚测什么、不测什么、为什么
+
+如果任务涉及多模块协作，且各模块由不同子任务实现，必须单独建立"联调集成测试任务"，确保所有模块连起来能形成完整闭环。
+
+### 7. 苏格拉底提问式测试设计
+
+设计测试时，要用苏格拉底提问拷问测试方案：
+- 这个测试真的验证了逻辑，还是只验证了"函数能跑通"？
+- 如果核心逻辑写错了，这个测试能发现吗？
+- 边界条件、失败路径、异常输入都覆盖了吗？
+- 只测单个函数有意义吗？模块拼起来会不会炸？
+- 这个测试通过了，能说明功能真的可用吗？
+
+如果这些问题答不上来，说明测试方案还不够扎实。
+
 ## 标准流程
 
 ### Step 1: Task Contract Preflight
@@ -80,13 +100,26 @@ trellis-task-contract
 6. 实现范围
 7. 接入范围
 8. 边界场景
-9. 验收标准
-10. 反偷懒验收
-11. 证据计划
-12. Checkpoints
-13. Review 打回条件
+9. 测试覆盖范围（单测 + 集成测试）
+10. 验收标准
+11. 反偷懒验收
+12. 证据计划
+13. Checkpoints
+14. Review 打回条件
 
-使用：`references/02_task_contract_template.md`
+使用：`references/02_task_contract_template.md` 和 `references/09_testing_contract.md`
+
+### Step 2.5: 测试契约审查
+
+生成任务后，必须先审查测试方案是否扎实：
+
+1. 单测覆盖了核心逻辑和边界吗？还是只测表面？
+2. 集成测试覆盖了模块交互吗？还是只有单元测试孤岛？
+3. 如果核心逻辑写错了，测试能发现吗？
+4. 测试范围写清楚了吗？还是只写了"有测试"三个字？
+5. 多模块任务有没有联调集成测试任务？
+
+测试方案不扎实的，打回重写，不准进入实现。
 
 ### Step 3: Task Contract Review
 
@@ -158,4 +191,5 @@ FAIL
 - 验收与证据：`references/04_acceptance_and_evidence.md`
 - 审查 Rubric：`references/05_review_rubric.md`
 - Checkpoint 工作流：`references/06_checkpoint_workflow.md`
+- 测试契约（单测/集成/联调）：`references/09_testing_contract.md`
 - 评测样例：`references/08_eval_cases.md`
